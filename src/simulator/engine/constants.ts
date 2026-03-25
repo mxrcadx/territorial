@@ -15,6 +15,8 @@ export const REF = {
   COOLING_FLOOR: 0.2,                        // minimum cooling multiplier (never zero)
   MW_PER_WELL_PAIR: 7.5,                     // MW average for Iceland high-enthalpy
 
+  CABLE_FACTOR: 0.05 * M3_TO_FT3 / 3.281, // ft³ per ft of inter-stack distance
+
   // Height/width calibration: these are wide, squat industrial buildings — not towers.
   // At 50 MW / favorability 0.1 (worst case) → ~200 ft tall.
   // Typical 25 MW / favorability 0.7 → ~80–120 ft tall.

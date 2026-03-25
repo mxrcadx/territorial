@@ -41,7 +41,7 @@ function Slider({ label, value, min, max, step, unit, onChange, description, sho
                 const v = Number(raw);
                 if (!isNaN(v) && v >= min && v <= max) onChange(v);
               }}
-              className="w-12 bg-transparent border border-neutral-700 rounded px-1 py-0 text-[12px] text-white text-right tabular-nums focus:outline-none focus:border-neutral-500"
+              className="w-14 bg-transparent border border-neutral-700 rounded px-1 py-0 text-[12px] text-white text-right tabular-nums focus:outline-none focus:border-neutral-500"
             />
             <span className="text-[12px] text-white tabular-nums">{unit}</span>
           </div>
@@ -182,6 +182,179 @@ function MapOverlayControls() {
   );
 }
 
+function ToggleButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex-1 py-1.5 text-[10px] uppercase tracking-wider rounded transition-colors ${
+        active
+          ? 'text-white bg-[#1a1a1a] border border-neutral-600'
+          : 'text-neutral-500 bg-transparent border border-neutral-800 hover:text-neutral-300'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function SimulationControls() {
+  const {
+    totalComputeDemand, setTotalComputeDemand,
+    visiblePhase, setVisiblePhase,
+    season, setSeason,
+    topology, setTopology,
+    selectedZoneIndex,
+  } = useStore();
+
+  return (
+    <Collapsible title="Simulation">
+      <Slider
+        label="Total Demand"
+        value={totalComputeDemand}
+        min={10} max={2000} step={10}
+        unit=" MW"
+        onChange={setTotalComputeDemand}
+        description="Total compute demand for the selected zone"
+        showInput
+      />
+      <Slider
+        label="Phase"
+        value={visiblePhase}
+        min={1} max={5} step={1}
+        unit=""
+        onChange={setVisiblePhase}
+        description="Deployment phase (1 = best sites first)"
+      />
+      <div className="mb-4">
+        <div className="text-[11px] text-neutral-400 uppercase tracking-wider mb-1.5">Season</div>
+        <div className="flex gap-1.5">
+          <ToggleButton label="Summer" active={season === 'summer'} onClick={() => setSeason('summer')} />
+          <ToggleButton label="Winter" active={season === 'winter'} onClick={() => setSeason('winter')} />
+        </div>
+        <p className="text-[8px] text-neutral-600 mt-1">
+          {season === 'summer' ? 'Ambient: 10°C' : 'Ambient: -5°C'} — affects cooling volumes
+        </p>
+      </div>
+      <div className="mb-2">
+        <div className="text-[11px] text-neutral-400 uppercase tracking-wider mb-1.5">Topology</div>
+        <div className="flex gap-1.5">
+          <ToggleButton label="Ring" active={topology === 'ring'} onClick={() => setTopology('ring')} />
+          <ToggleButton label="Star" active={topology === 'star'} onClick={() => setTopology('star')} />
+        </div>
+        <p className="text-[8px] text-neutral-600 mt-1">Inter-cluster network layout</p>
+      </div>
+      {selectedZoneIndex === null && (
+        <p className="text-[9px] text-neutral-500 italic mt-2">
+          Select a highland zone on the map to run the simulation.
+        </p>
+      )}
+    </Collapsible>
+  );
+}
+
+function StackDetail() {
+  const { selectedStackId, stacks, clusters, setSelectedStack } = useStore();
+  if (!selectedStackId) return null;
+
+  const stack = stacks.find(s => s.id === selectedStackId);
+  if (!stack) return null;
+
+  const cluster = clusters.find(c => c.stackIds.includes(selectedStackId));
+  const totalVol = SECTION_ORDER.reduce((sum, k) => sum + stack.volumes[k], 0);
+
+  return (
+    <Collapsible title="Stack Detail">
+      <div className="space-y-2 text-[11px]">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-neutral-400 text-[10px]">Stack {selectedStackId.replace('stack-', '#')}</span>
+          <button
+            onClick={() => setSelectedStack(null)}
+            className="text-[9px] text-neutral-500 hover:text-white transition-colors"
+          >
+            ✕ close
+          </button>
+        </div>
+
+        <div className="flex justify-between">
+          <span className="text-neutral-500">Load</span>
+          <span className="text-white tabular-nums">{stack.computeLoad.toFixed(0)} MW</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-neutral-500">Phase</span>
+          <span className="text-white tabular-nums">{stack.phase}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-neutral-500">Total Height</span>
+          <span className="text-white tabular-nums">{stack.volumes.totalHeight.toFixed(1)} ft</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-neutral-500">Total Volume</span>
+          <span className="text-white tabular-nums">{totalVol.toFixed(0)} ft³</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-neutral-500">Wells</span>
+          <span className="text-white tabular-nums">{stack.volumes.wellCount}</span>
+        </div>
+
+        {/* Site scores */}
+        <div className="mt-2 pt-2 border-t border-neutral-800 space-y-1">
+          <div className="text-[10px] text-neutral-400 uppercase tracking-wider mb-1">Site Scores</div>
+          <div className="flex justify-between">
+            <span className="text-neutral-500">Favorability</span>
+            <span className="text-white tabular-nums">{stack.siteScores.favorability.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-neutral-500">Buildability</span>
+            <span className="text-white tabular-nums">{stack.siteScores.buildability.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-neutral-500">Composite</span>
+            <span className="text-white tabular-nums">{stack.siteScores.composite.toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Cluster info */}
+        {cluster && (
+          <div className="mt-2 pt-2 border-t border-neutral-800 space-y-1">
+            <div className="text-[10px] text-neutral-400 uppercase tracking-wider mb-1">Cluster</div>
+            <div className="flex justify-between">
+              <span className="text-neutral-500">Members</span>
+              <span className="text-white tabular-nums">{cluster.stackIds.length}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-neutral-500">Sharing</span>
+              <span className="text-white tabular-nums">{cluster.sharingFactor.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-neutral-500">Cluster MW</span>
+              <span className="text-white tabular-nums">{cluster.totalCompute.toFixed(0)}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Volume breakdown */}
+        <div className="mt-2 pt-2 border-t border-neutral-800 space-y-1.5">
+          {SECTION_ORDER.map((key) => (
+            <div key={key} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-2 h-2 rounded-sm shrink-0"
+                  style={{ backgroundColor: VOLUME_COLORS[key] }}
+                />
+                <span className="text-neutral-400">{VOLUME_LABELS[key]}</span>
+              </div>
+              <span className="text-white tabular-nums whitespace-nowrap text-[10px]">
+                {stack.volumes[key].toFixed(0)} ft³
+                <span className="text-neutral-600 ml-1">{stack.volumes.deltas[key].toFixed(1)}×</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Collapsible>
+  );
+}
+
 export function ControlPanel() {
   const {
     viewMode,
@@ -189,6 +362,7 @@ export function ControlPanel() {
     favorability, setFavorability,
     ambientTemp, setAmbientTemp,
     volumes,
+    selectedStackId,
   } = useStore();
 
   const totalVolume = volumes.compute + volumes.geothermal + volumes.cooling + volumes.support + volumes.circulation;
@@ -207,24 +381,32 @@ export function ControlPanel() {
       {/* View Toggle */}
       <ViewToggle />
 
-      {/* Your Choices */}
+      {/* Your Choices — always visible */}
       <Collapsible title="Your Choices">
-        <Slider
-          label="Power Demand"
-          value={computeLoad}
-          min={5} max={50} step={1}
-          unit=" MW"
-          onChange={setComputeLoad}
-          description="How much energy this stack needs"
-          showInput
-        />
+        {viewMode === 'section' ? (
+          <Slider
+            label="Power Demand"
+            value={computeLoad}
+            min={5} max={50} step={1}
+            unit=" MW"
+            onChange={setComputeLoad}
+            description="How much energy this stack needs"
+            showInput
+          />
+        ) : null}
         <PrioritySlider />
       </Collapsible>
 
-      {/* Map Overlays — only in map mode */}
+      {/* Phase C: Simulation controls — map mode only */}
+      {viewMode === 'map' && <SimulationControls />}
+
+      {/* Map Overlays — map mode only */}
       {viewMode === 'map' && <MapOverlayControls />}
 
-      {/* Site Conditions — only in section mode */}
+      {/* Phase C: Stack detail — map mode, when stack selected */}
+      {viewMode === 'map' && selectedStackId && <StackDetail />}
+
+      {/* Site Conditions — section mode only */}
       {viewMode === 'section' && (
         <Collapsible title="Site Conditions" variant="site">
           <p className="text-[8px] text-neutral-600 mb-3 italic">
@@ -249,53 +431,55 @@ export function ControlPanel() {
         </Collapsible>
       )}
 
-      {/* What This Produces */}
-      <Collapsible title="What This Produces">
-        <div className="space-y-2 text-[11px]">
-          <div className="flex justify-between">
-            <span className="text-neutral-500">Total Height</span>
-            <span className="text-white tabular-nums">{volumes.totalHeight.toFixed(1)} ft</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-neutral-500">Total Volume</span>
-            <span className="text-white tabular-nums">{totalVolume.toFixed(0)} ft³</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-neutral-500">Wells Needed</span>
-            <span className="text-white tabular-nums">{volumes.wellCount}</span>
-          </div>
-          <div className="flex justify-between items-start">
-            <span className="text-neutral-500">Heat Multiplier</span>
-            <div className="text-right">
-              <span className="text-white tabular-nums">{volumes.heatMultiplier.toFixed(1)}×</span>
-              {volumes.heatMultiplier > 1.1 && (
-                <p className="text-[8px] text-neutral-600 mt-0.5 leading-tight max-w-[100px]">
-                  Extra geothermal plant needed because this site has less heat underground
-                </p>
-              )}
+      {/* What This Produces — section mode only */}
+      {viewMode === 'section' && (
+        <Collapsible title="What This Produces">
+          <div className="space-y-2 text-[11px]">
+            <div className="flex justify-between">
+              <span className="text-neutral-500">Total Height</span>
+              <span className="text-white tabular-nums">{volumes.totalHeight.toFixed(1)} ft</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-neutral-500">Total Volume</span>
+              <span className="text-white tabular-nums">{totalVolume.toFixed(0)} ft³</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-neutral-500">Wells Needed</span>
+              <span className="text-white tabular-nums">{volumes.wellCount}</span>
+            </div>
+            <div className="flex justify-between items-start">
+              <span className="text-neutral-500">Heat Multiplier</span>
+              <div className="text-right">
+                <span className="text-white tabular-nums">{volumes.heatMultiplier.toFixed(1)}×</span>
+                {volumes.heatMultiplier > 1.1 && (
+                  <p className="text-[8px] text-neutral-600 mt-0.5 leading-tight max-w-[100px]">
+                    Extra geothermal plant needed because this site has less heat underground
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-neutral-800 space-y-1.5">
+              {SECTION_ORDER.map((key) => (
+                <div key={key} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-2 h-2 rounded-sm shrink-0"
+                      style={{ backgroundColor: VOLUME_COLORS[key] }}
+                    />
+                    <span className="text-neutral-400">{VOLUME_LABELS[key]}</span>
+                  </div>
+                  <span className="text-white tabular-nums whitespace-nowrap">
+                    {volumes[key].toFixed(0)} ft³
+                    {key === 'cooling' && volumes.coolingAtFloor && (
+                      <span className="text-[8px] text-neutral-600 ml-1">passive</span>
+                    )}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="mt-3 pt-3 border-t border-neutral-800 space-y-1.5">
-            {SECTION_ORDER.map((key) => (
-              <div key={key} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-2 h-2 rounded-sm shrink-0"
-                    style={{ backgroundColor: VOLUME_COLORS[key] }}
-                  />
-                  <span className="text-neutral-400">{VOLUME_LABELS[key]}</span>
-                </div>
-                <span className="text-white tabular-nums whitespace-nowrap">
-                  {volumes[key].toFixed(0)} ft³
-                  {key === 'cooling' && volumes.coolingAtFloor && (
-                    <span className="text-[8px] text-neutral-600 ml-1">passive</span>
-                  )}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Collapsible>
+        </Collapsible>
+      )}
     </div>
   );
 }

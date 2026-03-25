@@ -9,13 +9,14 @@ import {
   type GeoField,
   type HighlandZone,
 } from '../engine/suitabilityEngine';
+import { drawStackMarkers, hitTestStack } from './StackMarker';
+import { drawClusters, drawInterClusterNetwork } from './ClusterOverlay';
 
 /**
  * Favorability color ramp: yellow (high) → dark purple (low), semi-transparent.
  */
 function favorabilityColor(fav: number): [number, number, number, number] {
   const t = Math.max(0, Math.min(1, fav));
-  // Yellow (1.0) → Orange (0.6) → Purple (0.1)
   const r = Math.round(80 + 175 * t);
   const g = Math.round(20 + 200 * t * t);
   const b = Math.round(120 * (1 - t) + 30 * t);
@@ -33,6 +34,9 @@ export function MapView() {
     setSelectedZone, setHoveredField, setHoveredZone,
     setGeoFields, setHighlandZones, setDEMMeta,
     showFavorability,
+    stacks, clusters, selectedStackId, hoveredStackId,
+    visiblePhase, topology,
+    setSelectedStack, setHoveredStack,
   } = useStore();
 
   const [heightmapImg, setHeightmapImg] = useState<HTMLImageElement | null>(null);
@@ -42,17 +46,14 @@ export function MapView() {
 
   // Load data on mount
   useEffect(() => {
-    // Load heightmap PNG
     const img = new Image();
     img.onload = () => setHeightmapImg(img);
     img.src = '/data/iceland_heightmap.png';
 
-    // Load DEM metadata
     fetch('/data/iceland_dem_meta.json')
       .then(r => r.json())
       .then(m => setDEMMeta(m));
 
-    // Load geothermal fields
     fetch('/data/geothermal_fields.geojson')
       .then(r => r.json())
       .then(geojson => {
@@ -72,7 +73,6 @@ export function MapView() {
         setGeoFields(fields);
       });
 
-    // Load highland zones
     fetch('/data/highland_zones.geojson')
       .then(r => r.json())
       .then(geojson => {
@@ -135,7 +135,7 @@ export function MapView() {
   useEffect(() => {
     if (!demMeta || geoFields.length === 0 || canvasSize.w < 10) return;
 
-    const RES = 4; // compute every 4th pixel for performance
+    const RES = 4;
     const w = Math.ceil(canvasSize.w / RES);
     const h = Math.ceil(canvasSize.h / RES);
     const imgData = new ImageData(w, h);
@@ -143,7 +143,6 @@ export function MapView() {
     for (let py = 0; py < h; py++) {
       for (let px = 0; px < w; px++) {
         const { lng, lat } = unproject(px * RES, py * RES);
-        // Skip if outside Iceland bounds
         if (lng < demMeta.bbox[0] || lng > demMeta.bbox[2] ||
             lat < demMeta.bbox[1] || lat > demMeta.bbox[3]) {
           continue;
@@ -171,7 +170,6 @@ export function MapView() {
     ctx.fillStyle = '#0A0A0A';
     ctx.fillRect(0, 0, canvasSize.w, canvasSize.h);
 
-    // Fit image to canvas maintaining aspect ratio
     const scaleX = canvasSize.w / demMeta.width;
     const scaleY = canvasSize.h / demMeta.height;
     const scale = Math.min(scaleX, scaleY);
@@ -180,13 +178,12 @@ export function MapView() {
     const offsetX = (canvasSize.w - drawW) / 2;
     const offsetY = (canvasSize.h - drawH) / 2;
 
-    // Darken the heightmap for better contrast with overlays
     ctx.globalAlpha = 0.6;
     ctx.drawImage(heightmapImg, offsetX, offsetY, drawW, drawH);
     ctx.globalAlpha = 1.0;
   }, [heightmapImg, demMeta, canvasSize]);
 
-  // Draw overlays
+  // Draw overlays (favorability, zones, fields, stacks, clusters)
   useEffect(() => {
     const canvas = overlayRef.current;
     if (!canvas || !demMeta) return;
@@ -209,14 +206,12 @@ export function MapView() {
       ctx.globalAlpha = 1.0;
     }
 
-    // Selected zone dimming — draw a mask over everything except selected zone
+    // Selected zone dimming
     if (selectedZoneIndex !== null && highlandZones[selectedZoneIndex]) {
       const zone = highlandZones[selectedZoneIndex];
       ctx.save();
-      // Dim everything
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       ctx.fillRect(0, 0, canvasSize.w, canvasSize.h);
-      // Clear the selected zone area
       ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
       const ring = zone.coordinates[0];
@@ -258,6 +253,17 @@ export function MapView() {
       }
     });
 
+    // Phase C: Cluster overlays (behind stack markers)
+    if (clusters.length > 0) {
+      drawClusters(ctx, clusters, stacks, project, visiblePhase);
+      drawInterClusterNetwork(ctx, clusters, project, topology, visiblePhase, stacks);
+    }
+
+    // Phase C: Stack markers
+    if (stacks.length > 0) {
+      drawStackMarkers(ctx, stacks, project, visiblePhase, selectedStackId, hoveredStackId);
+    }
+
     // Geothermal field markers
     geoFields.forEach((field, i) => {
       const pt = project(field.lng, field.lat);
@@ -274,7 +280,6 @@ export function MapView() {
       ctx.stroke();
       ctx.globalAlpha = 1.0;
 
-      // Always show name for active production fields
       if (field.installedMw > 0 || isHovered) {
         ctx.font = `${isHovered ? 11 : 9}px 'JetBrains Mono', monospace`;
         ctx.fillStyle = isHovered ? '#fff' : '#aaa';
@@ -286,6 +291,8 @@ export function MapView() {
     demMeta, geoFields, highlandZones, canvasSize,
     selectedZoneIndex, hoveredFieldIndex, hoveredZoneIndex,
     showFavorability, favCache, project,
+    stacks, clusters, selectedStackId, hoveredStackId,
+    visiblePhase, topology,
   ]);
 
   // Mouse interaction
@@ -294,7 +301,27 @@ export function MapView() {
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
 
-    // Check fields (closest within threshold)
+    // Phase C: Check stacks first
+    if (stacks.length > 0) {
+      const hitStack = hitTestStack(sx, sy, stacks, project, visiblePhase);
+      if (hitStack) {
+        const stack = stacks.find(s => s.id === hitStack);
+        setHoveredStack(hitStack);
+        setHoveredField(null);
+        setHoveredZone(null);
+        if (stack) {
+          setTooltip({
+            x: sx, y: sy,
+            text: `Stack ${hitStack.replace('stack-', '#')}`,
+            sub: `${stack.computeLoad.toFixed(0)} MW — favorability ${stack.siteScores.favorability.toFixed(2)}`,
+          });
+        }
+        return;
+      }
+      setHoveredStack(null);
+    }
+
+    // Check fields
     let hitField = -1;
     let minDist = 20;
     geoFields.forEach((f, i) => {
@@ -338,12 +365,21 @@ export function MapView() {
       setHoveredZone(null);
       setTooltip(null);
     }
-  }, [geoFields, highlandZones, project, setHoveredField, setHoveredZone]);
+  }, [geoFields, highlandZones, stacks, project, visiblePhase, setHoveredField, setHoveredZone, setHoveredStack]);
 
   const handleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
+
+    // Phase C: Check stacks first
+    if (stacks.length > 0) {
+      const hitStack = hitTestStack(sx, sy, stacks, project, visiblePhase);
+      if (hitStack) {
+        setSelectedStack(selectedStackId === hitStack ? null : hitStack);
+        return;
+      }
+    }
 
     // Check zones
     for (let i = 0; i < highlandZones.length; i++) {
@@ -355,13 +391,14 @@ export function MapView() {
       }
     }
     setSelectedZone(null);
-  }, [highlandZones, project, selectedZoneIndex, setSelectedZone]);
+  }, [highlandZones, stacks, project, selectedZoneIndex, selectedStackId, visiblePhase, setSelectedZone, setSelectedStack]);
 
   const handleMouseLeave = useCallback(() => {
     setHoveredField(null);
     setHoveredZone(null);
+    setHoveredStack(null);
     setTooltip(null);
-  }, [setHoveredField, setHoveredZone]);
+  }, [setHoveredField, setHoveredZone, setHoveredStack]);
 
   // Zone stats
   const selectedZone = selectedZoneIndex !== null ? highlandZones[selectedZoneIndex] : null;
@@ -372,6 +409,13 @@ export function MapView() {
     const capacity = estimateCapacityMW(area, avgSuit);
     return { area, avgSuit, capacity };
   })() : null;
+
+  // Simulation summary
+  const simSummary = stacks.length > 0 ? {
+    totalStacks: stacks.filter(s => s.phase <= visiblePhase).length,
+    totalMW: stacks.filter(s => s.phase <= visiblePhase).reduce((s, st) => s + st.computeLoad, 0),
+    clusterCount: clusters.length,
+  } : null;
 
   return (
     <div ref={containerRef} className="flex-1 relative bg-[#0A0A0A] overflow-hidden">
@@ -431,6 +475,24 @@ export function MapView() {
               <span className="text-white tabular-nums">{zoneStats.capacity} MW</span>
             </div>
           </div>
+
+          {/* Simulation summary */}
+          {simSummary && (
+            <div className="mt-3 pt-2 border-t border-neutral-800 space-y-1 text-[10px]">
+              <div className="flex justify-between">
+                <span className="text-neutral-500">Active Stacks</span>
+                <span className="text-[#D94040] tabular-nums">{simSummary.totalStacks}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-neutral-500">Deployed MW</span>
+                <span className="text-[#D94040] tabular-nums">{simSummary.totalMW.toFixed(0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-neutral-500">Clusters</span>
+                <span className="text-[#D94040] tabular-nums">{simSummary.clusterCount}</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

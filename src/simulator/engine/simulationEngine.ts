@@ -11,6 +11,8 @@ export interface SiteConditions {
   computeLoad: number;         // MW
   favorability: number;        // 0.1 – 1.0 (heat availability)
   ambientTemp: number;         // °C
+  interStackDistance?: number;  // ft (0 = isolated, from cluster geometry in Phase C)
+  sharingFactor?: number;      // 0.5–1.0 (1.0 = isolated, 0.5 = dense cluster)
 }
 
 export interface VolumeResult {
@@ -42,6 +44,8 @@ function getBaseline(): VolumeResult {
 
 function computeVolumesRaw(conditions: SiteConditions): VolumeResult {
   const { computeLoad, favorability, ambientTemp } = conditions;
+  const interStackDistance = conditions.interStackDistance ?? 0;
+  const sharingFactor = conditions.sharingFactor ?? 1.0;
   const loadRatio = computeLoad / REF.REF_LOAD;
 
   // Compute volume: scales linearly with load
@@ -49,8 +53,9 @@ function computeVolumesRaw(conditions: SiteConditions): VolumeResult {
 
   // Geothermal volume: scales with load, inversely with favorability
   // Low favorability → more plant infrastructure needed (deeper wells, more separators)
+  // Sharing factor reduces geothermal volume when stacks share infrastructure in a cluster
   const favorabilityMultiplier = 1 / Math.max(favorability, 0.1);
-  const geothermal = REF.BASE_PLANT_VOLUME * loadRatio * favorabilityMultiplier;
+  const geothermal = REF.BASE_PLANT_VOLUME * loadRatio * favorabilityMultiplier * sharingFactor;
 
   // Cooling volume: scales with load and ambient temperature
   // Warmer ambient → more cooling infrastructure needed
@@ -62,9 +67,8 @@ function computeVolumesRaw(conditions: SiteConditions): VolumeResult {
   // Support volume: scales with load
   const support = REF.BASE_SUPPORT_VOLUME * loadRatio;
 
-  // Circulation volume: scales with load — stairs, corridors, vehicle access
-  // NOTE (Phase C): inter-stack distance component will be added from cluster geometry
-  const circulation = REF.BASE_CIRCULATION_VOLUME * loadRatio;
+  // Circulation volume: scales with load + inter-stack cable distance
+  const circulation = REF.BASE_CIRCULATION_VOLUME * loadRatio + REF.CABLE_FACTOR * interStackDistance;
 
   // Total volume
   const totalVolume = compute + geothermal + cooling + support + circulation;
