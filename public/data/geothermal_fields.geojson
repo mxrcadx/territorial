@@ -1,0 +1,145 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Hengill",
+        "reservoir_temp_c": 320,
+        "confidence": 1.0,
+        "status": "Active production — Hellisheiði and Nesjavellir plants",
+        "installed_mw": 423
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-21.32, 64.05]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Krafla",
+        "reservoir_temp_c": 350,
+        "confidence": 1.0,
+        "status": "Active production — Krafla power station",
+        "installed_mw": 60
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-16.78, 65.72]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Reykjanes",
+        "reservoir_temp_c": 310,
+        "confidence": 1.0,
+        "status": "Active production — Reykjanes power station",
+        "installed_mw": 100
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-22.68, 63.82]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Námafjall",
+        "reservoir_temp_c": 320,
+        "confidence": 0.95,
+        "status": "Active production — Bjarnarflag plant",
+        "installed_mw": 5
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-16.82, 65.64]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Torfajökull",
+        "reservoir_temp_c": 300,
+        "confidence": 0.7,
+        "status": "Explored — no production. Largest rhyolite volcano in Iceland",
+        "installed_mw": 0
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-19.17, 63.92]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kerlingarfjöll",
+        "reservoir_temp_c": 250,
+        "confidence": 0.6,
+        "status": "Explored — high-temperature area in central highlands",
+        "installed_mw": 0
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-19.28, 64.63]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Hveravellir",
+        "reservoir_temp_c": 200,
+        "confidence": 0.5,
+        "status": "Explored — hot springs area on Kjölur route",
+        "installed_mw": 0
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-19.56, 64.86]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Askja",
+        "reservoir_temp_c": 310,
+        "confidence": 0.5,
+        "status": "Explored — remote caldera, limited access",
+        "installed_mw": 0
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-16.75, 65.05]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Grímsvötn",
+        "reservoir_temp_c": 320,
+        "confidence": 0.3,
+        "status": "Sub-glacial — under Vatnajökull ice cap. Highest heat flow but inaccessible",
+        "installed_mw": 0
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-17.33, 64.42]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Theistareykir",
+        "reservoir_temp_c": 280,
+        "confidence": 1.0,
+        "status": "Active production — Theistareykir power station",
+        "installed_mw": 90
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-16.95, 65.88]
+      }
+    }
+  ]
+}
