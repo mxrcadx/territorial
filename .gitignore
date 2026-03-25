@@ -4,3 +4,6 @@ dist
 .env.local
 *.log
 .DS_Store
+
+# Large DEM source files (regenerate PNG with: node scripts/dem-to-png.mjs)
+public/data/*.tif

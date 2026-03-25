@@ -132,8 +132,59 @@ function Collapsible({ title, defaultOpen = true, children, variant = 'default' 
   );
 }
 
+function ViewToggle() {
+  const { viewMode, setViewMode } = useStore();
+
+  return (
+    <div className="flex border-b border-neutral-800">
+      <button
+        onClick={() => setViewMode('section')}
+        className={`flex-1 py-2.5 text-[10px] uppercase tracking-widest transition-colors ${
+          viewMode === 'section'
+            ? 'text-white bg-[#1a1a1a]'
+            : 'text-neutral-500 hover:text-neutral-300'
+        }`}
+      >
+        Section View
+      </button>
+      <button
+        onClick={() => setViewMode('map')}
+        className={`flex-1 py-2.5 text-[10px] uppercase tracking-widest transition-colors ${
+          viewMode === 'map'
+            ? 'text-white bg-[#1a1a1a]'
+            : 'text-neutral-500 hover:text-neutral-300'
+        }`}
+      >
+        Map View
+      </button>
+    </div>
+  );
+}
+
+function MapOverlayControls() {
+  const { showFavorability, setShowFavorability } = useStore();
+
+  return (
+    <Collapsible title="Map Overlays" defaultOpen={true}>
+      <label className="flex items-center gap-2 cursor-pointer mb-2">
+        <input
+          type="checkbox"
+          checked={showFavorability}
+          onChange={(e) => setShowFavorability(e.target.checked)}
+          className="w-3 h-3 rounded border-neutral-600 accent-[#D94040]"
+        />
+        <span className="text-[10px] text-neutral-400">Favorability heatmap</span>
+      </label>
+      <p className="text-[8px] text-neutral-600 leading-tight">
+        Yellow = near geothermal field. Purple = far from heat source.
+      </p>
+    </Collapsible>
+  );
+}
+
 export function ControlPanel() {
   const {
+    viewMode,
     computeLoad, setComputeLoad,
     favorability, setFavorability,
     ambientTemp, setAmbientTemp,
@@ -147,11 +198,14 @@ export function ControlPanel() {
       {/* Header */}
       <div className="px-4 pr-6 py-4 border-b border-neutral-800">
         <h1 className="text-[13px] font-semibold text-white tracking-wide">TERRITORIAL</h1>
-        <p className="text-[10px] text-neutral-500 mt-0.5">Compute Simulator — Phase A</p>
+        <p className="text-[10px] text-neutral-500 mt-0.5">Compute Simulator</p>
         <p className="text-[9px] text-neutral-600 mt-2 leading-relaxed">
           You choose how much power and what matters most. The terrain decides what gets built.
         </p>
       </div>
+
+      {/* View Toggle */}
+      <ViewToggle />
 
       {/* Your Choices */}
       <Collapsible title="Your Choices">
@@ -167,28 +221,33 @@ export function ControlPanel() {
         <PrioritySlider />
       </Collapsible>
 
-      {/* Site Conditions */}
-      <Collapsible title="Site Conditions" variant="site">
-        <p className="text-[8px] text-neutral-600 mb-3 italic">
-          Manual controls for testing. In later phases these come from the map automatically.
-        </p>
-        <Slider
-          label="Heat Availability"
-          value={favorability}
-          min={0.1} max={1.0} step={0.05}
-          unit=""
-          onChange={setFavorability}
-          description="How much geothermal energy is under this spot"
-        />
-        <Slider
-          label="Air Temperature"
-          value={ambientTemp}
-          min={-15} max={15} step={1}
-          unit="°C"
-          onChange={setAmbientTemp}
-          description="How cold it is here"
-        />
-      </Collapsible>
+      {/* Map Overlays — only in map mode */}
+      {viewMode === 'map' && <MapOverlayControls />}
+
+      {/* Site Conditions — only in section mode */}
+      {viewMode === 'section' && (
+        <Collapsible title="Site Conditions" variant="site">
+          <p className="text-[8px] text-neutral-600 mb-3 italic">
+            Manual controls for testing. In later phases these come from the map automatically.
+          </p>
+          <Slider
+            label="Heat Availability"
+            value={favorability}
+            min={0.1} max={1.0} step={0.05}
+            unit=""
+            onChange={setFavorability}
+            description="How much geothermal energy is under this spot"
+          />
+          <Slider
+            label="Air Temperature"
+            value={ambientTemp}
+            min={-15} max={15} step={1}
+            unit="°C"
+            onChange={setAmbientTemp}
+            description="How cold it is here"
+          />
+        </Collapsible>
+      )}
 
       {/* What This Produces */}
       <Collapsible title="What This Produces">

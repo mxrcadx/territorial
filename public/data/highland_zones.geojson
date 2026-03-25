@@ -1,0 +1,138 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Hengill Area",
+        "description": "Southwest highlands near Hellisheiði. Best geothermal infrastructure, closest to Reykjavík, most developed.",
+        "primary_fields": ["Hengill"],
+        "avg_favorability": 0.9
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-21.60, 64.15],
+          [-21.00, 64.15],
+          [-21.00, 63.95],
+          [-21.60, 63.95],
+          [-21.60, 64.15]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Krafla–Mývatn Area",
+        "description": "Northeast highlands. Active volcanic zone with existing power infrastructure. Near Mývatn lake.",
+        "primary_fields": ["Krafla", "Námafjall", "Theistareykir"],
+        "avg_favorability": 0.85
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-17.20, 66.00],
+          [-16.40, 66.00],
+          [-16.40, 65.50],
+          [-17.20, 65.50],
+          [-17.20, 66.00]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kerlingarfjöll Highlands",
+        "description": "Central highlands. Remote high-temperature area at the intersection of Kjölur route. Minimal existing infrastructure.",
+        "primary_fields": ["Kerlingarfjöll"],
+        "avg_favorability": 0.6
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-19.60, 64.75],
+          [-18.90, 64.75],
+          [-18.90, 64.50],
+          [-19.60, 64.50],
+          [-19.60, 64.75]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Hveravellir Corridor",
+        "description": "Central highlands along the Kjölur route between Langjökull and Hofsjökull glaciers. Hot springs zone.",
+        "primary_fields": ["Hveravellir"],
+        "avg_favorability": 0.5
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-19.90, 65.00],
+          [-19.20, 65.00],
+          [-19.20, 64.75],
+          [-19.90, 64.75],
+          [-19.90, 65.00]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Torfajökull Highlands",
+        "description": "South-central highlands. Largest rhyolite volcano in Iceland. Remote, unexploited geothermal potential.",
+        "primary_fields": ["Torfajökull"],
+        "avg_favorability": 0.65
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-19.50, 64.05],
+          [-18.80, 64.05],
+          [-18.80, 63.80],
+          [-19.50, 63.80],
+          [-19.50, 64.05]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Askja Caldera Zone",
+        "description": "East-central highlands. Remote caldera with extreme terrain. High geothermal potential but very limited access.",
+        "primary_fields": ["Askja"],
+        "avg_favorability": 0.45
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-17.10, 65.20],
+          [-16.40, 65.20],
+          [-16.40, 64.90],
+          [-17.10, 64.90],
+          [-17.10, 65.20]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Sprengisandur Interior",
+        "description": "The vast interior desert between Hofsjökull and Vatnajökull. Flat but extremely remote. No geothermal fields — would require deep EGS drilling.",
+        "primary_fields": [],
+        "avg_favorability": 0.15
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-18.50, 65.10],
+          [-17.50, 65.10],
+          [-17.50, 64.60],
+          [-18.50, 64.60],
+          [-18.50, 65.10]
+        ]]
+      }
+    }
+  ]
+}
