@@ -17,10 +17,11 @@ import { drawClusters, drawInterClusterNetwork } from './ClusterOverlay';
  */
 function favorabilityColor(fav: number): [number, number, number, number] {
   const t = Math.max(0, Math.min(1, fav));
-  const r = Math.round(80 + 175 * t);
-  const g = Math.round(20 + 200 * t * t);
-  const b = Math.round(120 * (1 - t) + 30 * t);
-  return [r, g, b, Math.round(100 + 50 * t)];
+  // Brighter yellow at high values, deep purple at low
+  const r = Math.round(60 + 195 * t);
+  const g = Math.round(10 + 230 * t * t);
+  const b = Math.round(140 * (1 - t) + 20 * t);
+  return [r, g, b, Math.round(130 + 80 * t)];
 }
 
 export function MapView() {
@@ -200,7 +201,7 @@ export function MapView() {
       tmpCanvas.height = favCache.height;
       const tmpCtx = tmpCanvas.getContext('2d')!;
       tmpCtx.putImageData(favCache, 0, 0);
-      ctx.globalAlpha = 0.4;
+      ctx.globalAlpha = 0.6;
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(tmpCanvas, 0, 0, canvasSize.w, canvasSize.h);
       ctx.globalAlpha = 1.0;
@@ -264,28 +265,42 @@ export function MapView() {
       drawStackMarkers(ctx, stacks, project, visiblePhase, selectedStackId, hoveredStackId);
     }
 
-    // Geothermal field markers
+    // Geothermal field markers — circles with semi-transparent fill, distinct from stack bars
     geoFields.forEach((field, i) => {
       const pt = project(field.lng, field.lat);
-      const radius = Math.max(4, Math.sqrt(field.installedMw) * 0.8 + 3);
+      const radius = Math.max(5, Math.sqrt(field.installedMw) * 0.7 + 4);
       const isHovered = hoveredFieldIndex === i;
 
+      // Outer glow for active fields
+      if (field.installedMw > 0) {
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, radius + 3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(45, 122, 58, 0.15)';
+        ctx.fill();
+      }
+
+      // Circle fill — semi-transparent green
       ctx.beginPath();
       ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
-      ctx.fillStyle = isHovered ? '#4ade80' : '#2D7A3A';
-      ctx.globalAlpha = isHovered ? 1.0 : 0.85;
+      ctx.fillStyle = isHovered ? 'rgba(74, 222, 128, 0.5)' : 'rgba(45, 122, 58, 0.35)';
       ctx.fill();
-      ctx.strokeStyle = '#fff';
+
+      // White outline
+      ctx.strokeStyle = isHovered ? '#fff' : 'rgba(255, 255, 255, 0.6)';
       ctx.lineWidth = isHovered ? 2 : 1;
       ctx.stroke();
-      ctx.globalAlpha = 1.0;
 
-      if (field.installedMw > 0 || isHovered) {
-        ctx.font = `${isHovered ? 11 : 9}px 'JetBrains Mono', monospace`;
-        ctx.fillStyle = isHovered ? '#fff' : '#aaa';
-        ctx.textAlign = 'left';
-        ctx.fillText(field.name, pt.x + radius + 4, pt.y + 3);
-      }
+      // Center dot
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 2, 0, Math.PI * 2);
+      ctx.fillStyle = isHovered ? '#4ade80' : '#2D7A3A';
+      ctx.fill();
+
+      // Label below marker
+      ctx.font = `${isHovered ? 10 : 8}px 'JetBrains Mono', monospace`;
+      ctx.fillStyle = isHovered ? '#fff' : 'rgba(180, 180, 180, 0.7)';
+      ctx.textAlign = 'center';
+      ctx.fillText(field.name, pt.x, pt.y + radius + 11);
     });
   }, [
     demMeta, geoFields, highlandZones, canvasSize,
@@ -495,6 +510,39 @@ export function MapView() {
           )}
         </div>
       )}
+
+      {/* No zone selected message */}
+      {selectedZoneIndex === null && (
+        <div
+          className="absolute top-4 left-1/2 -translate-x-1/2 bg-[#111111]/80 border border-neutral-700 rounded px-4 py-2"
+          style={{ fontFamily: "'JetBrains Mono', monospace" }}
+        >
+          <span className="text-[11px] text-neutral-400">Click a zone to begin</span>
+        </div>
+      )}
+
+      {/* Legend */}
+      <div
+        className="absolute bottom-4 left-4 bg-[#111111]/90 border border-neutral-800 rounded px-3 py-2.5 space-y-1.5"
+        style={{ fontFamily: "'JetBrains Mono', monospace" }}
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full border border-white/60" style={{ backgroundColor: 'rgba(45, 122, 58, 0.35)' }} />
+          <span className="text-[8px] text-neutral-500">Geothermal field</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2.5 h-4 rounded-[1px]" style={{ background: 'linear-gradient(to top, #2D7A3A, #3B82F6, #D94040, #E89020, #6BCB77)' }} />
+          <span className="text-[8px] text-neutral-500">Compute stack</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 border-t border-dashed border-white/30" />
+          <span className="text-[8px] text-neutral-500">Cluster boundary</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 border-t border-white/20" />
+          <span className="text-[8px] text-neutral-500">Infrastructure link</span>
+        </div>
+      </div>
     </div>
   );
 }

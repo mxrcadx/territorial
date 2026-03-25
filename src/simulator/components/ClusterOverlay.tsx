@@ -19,7 +19,6 @@ export function drawClusters(
   const stackMap = new Map(stacks.map(s => [s.id, s]));
 
   for (const cluster of clusters) {
-    // Filter to visible stacks in this cluster
     const visibleIds = cluster.stackIds.filter(id => {
       const s = stackMap.get(id);
       return s && s.phase <= visiblePhase;
@@ -28,9 +27,9 @@ export function drawClusters(
 
     const positions = visibleIds.map(id => stackMap.get(id)!.position);
 
-    // Convex hull boundary (only draw if ≥3 stacks visible)
-    if (positions.length >= 3) {
-      const hull = convexHull(positions);
+    // Convex hull boundary — draw for ≥2 stacks (line for 2, polygon for 3+)
+    if (positions.length >= 2) {
+      const hull = positions.length >= 3 ? convexHull(positions) : positions;
       const hullPts = hull.map(p => project(p[0], p[1]));
 
       ctx.beginPath();
@@ -38,19 +37,22 @@ export function drawClusters(
       for (let i = 1; i < hullPts.length; i++) {
         ctx.lineTo(hullPts[i].x, hullPts[i].y);
       }
-      ctx.closePath();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
+      if (positions.length >= 3) ctx.closePath();
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 5]);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Faint fill
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-      ctx.fill();
+      // Faint fill for polygons
+      if (positions.length >= 3) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.fill();
+      }
     }
 
-    // MST edges
+    // MST edges — thin white lines connecting stacks
     for (const [idA, idB] of cluster.mstEdges) {
       const a = stackMap.get(idA);
       const b = stackMap.get(idB);
@@ -63,7 +65,7 @@ export function drawClusters(
       ctx.beginPath();
       ctx.moveTo(ptA.x, ptA.y);
       ctx.lineTo(ptB.x, ptB.y);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
       ctx.lineWidth = 1;
       ctx.stroke();
     }
@@ -79,7 +81,6 @@ export function drawInterClusterNetwork(
   visiblePhase: number,
   stacks: Stack[],
 ) {
-  // Only show clusters that have at least one visible stack
   const stackMap = new Map(stacks.map(s => [s.id, s]));
   const activeClusters = clusters.filter(c =>
     c.stackIds.some(id => {
@@ -92,12 +93,11 @@ export function drawInterClusterNetwork(
 
   const centroids = activeClusters.map(c => project(c.centroid[0], c.centroid[1]));
 
-  ctx.strokeStyle = 'rgba(217, 64, 64, 0.4)'; // red, semi-transparent
+  ctx.strokeStyle = 'rgba(217, 64, 64, 0.5)';
   ctx.lineWidth = 1.5;
   ctx.setLineDash([6, 4]);
 
   if (topology === 'ring') {
-    // Connect centroids in a ring
     ctx.beginPath();
     ctx.moveTo(centroids[0].x, centroids[0].y);
     for (let i = 1; i < centroids.length; i++) {
@@ -106,7 +106,6 @@ export function drawInterClusterNetwork(
     ctx.closePath();
     ctx.stroke();
   } else {
-    // Star: connect all to centroid of centroids
     const cx = centroids.reduce((s, p) => s + p.x, 0) / centroids.length;
     const cy = centroids.reduce((s, p) => s + p.y, 0) / centroids.length;
 
@@ -117,7 +116,8 @@ export function drawInterClusterNetwork(
       ctx.stroke();
     }
 
-    // Draw hub marker
+    // Hub marker
+    ctx.setLineDash([]);
     ctx.beginPath();
     ctx.arc(cx, cy, 4, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(217, 64, 64, 0.6)';
@@ -126,7 +126,7 @@ export function drawInterClusterNetwork(
 
   ctx.setLineDash([]);
 
-  // Draw cluster centroid dots
+  // Cluster centroid dots
   for (const pt of centroids) {
     ctx.beginPath();
     ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2);
